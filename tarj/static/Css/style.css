@@ -3,10 +3,10 @@
 
 /* --- VARIÁVEIS DE DESIGN (PALETA E ESTILOS) --- */
 :root {
-    --cor-laranja-sp: #0a3979;
+    --cor-azul-sp: #0a3979;
     --cor-cinza-chumbo:  #343A40;
-    --cor-cinza-claro:  #F8F9FA; 
-    --cor-branco:  #6C757D;
+    --cor-cinza-claro:  #F8F8F8; 
+    --cor-branco:  #FFFFFF;
     --sombra-card: 0px 8px 25px rgba(0, 0, 0, 0.05);
     --sombra-card-hover: 0px 12px 30px rgba(0, 0, 0, 0.08);
     --raio-borda: 16px; /* Cantos bem arredondados */
@@ -16,7 +16,7 @@
 body {
     background-color: var(--cor-cinza-claro);
     font-family: 'Inter', sans-serif;
-    color: #6C757D; var(--cor-cinza-chumbo);
+    color: var(--cor-cinza-chumbo);
 }
 
 /* --- ESTILOS PARA O BREADCRUMB CLICÁVEL --- */
@@ -26,7 +26,7 @@ body {
 /* Ajusta o espaçamento do nome ao lado do logo */
 .navbar-brand span {
     font-weight: 600;
-    color: #F8F8F8 var(--cor-cinza-chumbo);
+    color: var(--cor-cinza-chumbo);
     font-size: 1rem;
 }
 
@@ -42,12 +42,12 @@ body {
 
 /* Botão principal de acesso */
 .btn-primary {
-    background-color: var(--cor-laranja-sp);
-    border-color: #6C757D var(--cor-laranja-sp);
+    background-color: var(--cor-azul-sp);
+    border-color: var(--cor-azul-sp);
     font-weight: 600;
 }
 .btn-primary:hover {
-    background-color: #0a3979; /* Laranja um pouco mais escuro */
+    background-color: #0a3979; /*  um pouco mais escuro */
     border-color: #0a3979;
 }
 
@@ -93,7 +93,7 @@ body {
     border-radius: var(--raio-borda);
     padding: 2.5rem 2rem;
     text-align: center;
-    border: 1px solid #E9ECEF;
+    border: 1px solid #F5F5F5;
     box-shadow: var(--sombra-card);
     transition: all 0.3s ease; /* A MÁGICA DA ANIMAÇÃO! */
     height: 100%; /* Garante que todos os cards na mesma linha tenham a mesma altura */
@@ -103,7 +103,7 @@ body {
 .tool-card:hover {
     transform: translateY(-8px); /* Levanta o card */
     box-shadow: var(--sombra-card-hover); /* Aumenta a sombra */
-    border-color: var(--cor-laranja-sp);
+    border-color: var(--cor-azul-sp);
 }
 
 .tool-card .icon-container {
@@ -112,7 +112,7 @@ body {
 
 .tool-card .icon-container i {
     font-size: 3rem; /* Tamanho grande para o ícone */
-    color: var(--cor-laranja-sp);
+    color: var(--cor-azul-sp);
 }
 
 .tool-card h2 {
@@ -141,9 +141,9 @@ footer {
     transition: color 0.2s ease-in-out; /* Adiciona uma transição suave */
 }
 
-/* Efeito ao passar o mouse: o link fica laranja */
+/* Efeito ao passar o mouse: o link fica azul */
 .sub-navbar a:hover {
-    color: var(--cor-laranja-sp); /* Usa a variável de cor laranja que já definimos */
+    color: var(--cor-azul-sp); /* Usa a variável de cor azul que já definimos */
     text-decoration: underline; /* Opcional: adiciona sublinhado no hover */
 } 
 /* ======== ESTILOS PARA A TABELA DE HISTÓRICO ======== */
@@ -223,10 +223,10 @@ footer {
   min-width: 240px; /* largura mínima igual para todos */
 }
 
-/* Primário - Laranja SP */
+/* Primário - Azul SP */
 .btn-stgc-primary {
-  background-color: var(--cor-laranja-sp);
-  border-color: var(--cor-laranja-sp);
+  background-color: var(--cor-azul-sp);
+  border-color: var(--cor-azul-sp);
   color: white;
 }
 .btn-stgc-primary:hover {
@@ -262,8 +262,8 @@ footer {
 
 /* Botão primário - Aplicar Tarjas */
 .btn-stgc-action-primary {
-  background-color: var(--cor-laranja-sp);
-  border-color: var(--cor-laranja-sp);
+  background-color: var(--cor-azul-sp);
+  border-color: var(--cor-azul-sp);
   color: white;
 }
 .btn-stgc-action-primary:hover {
