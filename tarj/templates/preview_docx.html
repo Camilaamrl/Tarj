@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Pré-visualização PDF OCR Tarjado{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <section class="col-md-9">
+        <div class="bg-white p-4 rounded-3 shadow-sm text-orange">
+            <h3 class="mb-3"><i class="bi bi-patch-check-fill text-success"></i> Documento Tarjado com Sucesso!</h3>
+            <p class="text-muted">Abaixo está a pré-visualização do seu documento com as tarjas aplicadas. Você pode ajustar as tarjas antes de baixar.</p>
+            <hr>
+
+            <form method="POST" action="{{ url_for('aplicar_tarjas_docx') }}" class="text-start" id="formTarjas">
+
+                <h4 class="mb-3">Dados encontrados:</h4>
+                <div class="mb-4">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="checkAll" checked>
+                        <label class="form-check-label fw-bold" for="checkAll">Selecionar/Desmarcar todos</label>
+                    </div>
+                    {% for item in ocorrencias %}
+                        <div class="form-check">
+                            <input class="form-check-input item-checkbox" type="checkbox" name="selecionados" value="{{ item.id }}" id="item{{ item.id }}" checked>
+                            <label class="form-check-label" for="item{{ item.id }}">
+                                [{{ item.tipo }}] "{{ item.texto }}" no parágrafo {{ item.paragrafo + 1 }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <h4 class="mb-2">Texto Original:</h4>
+                <div id="previewConteudo" class="border p-3 rounded bg-light" style="max-height: 400px; overflow-y: auto;">
+                    {% for p in paragrafos %}
+                        <p>{{ p }}</p>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-outline-secondary my-2" onclick="adicionarSelecaoComoTarja()">➕ Adicionar Seleção como Tarja</button>
+
+                <input type="hidden" name="tarjas_manualmente_adicionadas" id="manualTarjasHidden">
+
+                <div class="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+                    <button type="button" id="btn-abrir-download-popup" class="btn btn-stgc-action btn-stgc-action-primary">
+                        <i class="bi bi-shield-fill-x"></i> Aplicar Tarjas e Fazer Download
+                    </button>
+                    <a href="{{ url_for('tarjar_docx_preview') }}" class="btn btn-stgc-action btn-stgc-action-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar Solicitação
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<div id="popup-download" class="popup-container-overlay">
+  <div class="popup-content">
+    <h5 class="mb-3">Confirmação de Download</h5>
+    <p>Confirme se as tarjas aplicadas no documento estão corretas antes de finalizar. Esta ação é irreversível.</p>
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <button id="btn-cancelar-download" class="btn btn-secondary">Cancelar</button>
+      <button id="btn-confirmar-download" class="btn btn-stgc-action btn-stgc-action-primary">Confirmar e Baixar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    let tarjasManuais = [];
+    
+    function adicionarSelecaoComoTarja() {
+        const selecionado = window.getSelection().toString().trim();
+        if (selecionado.length === 0) {
+            alert("Selecione um trecho de texto com o mouse para adicionar como tarja.");
+            return;
+        }
+        tarjasManuais.push(selecionado);
+        document.getElementById("manualTarjasHidden").value = tarjasManuais.join("|");
+        alert(`Trecho selecionado "${selecionado}" adicionado para tarjamento.`);
+        atualizarPreview();
+    }
+
+    async function atualizarPreview() {
+        const selecionados = Array.from(document.querySelectorAll('input[name="selecionados"]:checked')).map(i => i.value);
+        const manuaisRaw = document.getElementById('manualTarjasHidden').value;
+        const manuais = manuaisRaw.split('|').map(t => t.trim()).filter(t => t.length > 0);
+
+        try {
+            const resp = await fetch('/atualizar_preview_docx', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({selecionados, manuais})
+            });
+
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error('Erro na resposta:', text);
+                alert('Erro ao atualizar preview');
+                return;
+            }
+
+            const data = await resp.json();
+
+            if (data.erro) {
+                console.error('Erro do servidor:', data.erro);
+                alert('Erro ao atualizar preview: ' + data.erro);
+                return;
+            }
+
+            const container = document.getElementById('previewConteudo');
+            container.innerHTML = '';
+            data.paragrafos.forEach(texto => {
+                const p = document.createElement('p');
+                p.textContent = texto;
+                container.appendChild(p);
+            });
+
+        } catch (e) {
+            console.error('Erro na requisição:', e);
+            alert('Erro inesperado ao atualizar preview');
+        }
+    }
+
+    // Checkbox mestre para selecionar/desmarcar todos
+    document.getElementById("checkAll").addEventListener("change", function () {
+        const checkboxes = document.querySelectorAll(".item-checkbox");
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        atualizarPreview();
+    });
+
+    // Atualiza preview ao alterar qualquer checkbox individual
+    document.querySelectorAll(".item-checkbox").forEach(cb => {
+        cb.addEventListener("change", atualizarPreview);
+    });
+
+    // Atualiza preview assim que a página carrega
+    window.addEventListener('load', atualizarPreview);
+    
+    // Lógica do Pop-up (agora no lugar certo)
+    const downloadButton = document.getElementById('btn-abrir-download-popup');
+    const popupDownload = document.getElementById('popup-download');
+    const btnCancelarDownload = document.getElementById('btn-cancelar-download');
+    const btnConfirmarDownload = document.getElementById('btn-confirmar-download');
+    const formTarjas = document.getElementById('formTarjas');
+
+    downloadButton.addEventListener('click', function(event) {
+        event.preventDefault(); 
+        popupDownload.classList.add('show-popup');
+    });
+
+    btnCancelarDownload.addEventListener('click', function() {
+        popupDownload.classList.remove('show-popup');
+    });
+
+    btnConfirmarDownload.addEventListener('click', function() {
+        popupDownload.classList.remove('show-popup');
+        formTarjas.submit();
+    });
+</script>
+
+<style>
+/* Estilo do overlay (fundo escuro) */
+.popup-container-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s, opacity 0.5s ease;
+}
+
+/* Visível quando a classe .show-popup é adicionada com JS */
+.popup-container-overlay.show-popup {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Estilo do conteúdo do pop-up */
+.popup-content {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 90%;
+  max-width: 500px;
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.popup-container-overlay.show-popup .popup-content {
+  transform: scale(1);
+}
+</style>
+
+{% endblock %}

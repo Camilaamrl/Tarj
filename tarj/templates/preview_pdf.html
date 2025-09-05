@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Página Inicial - TarjaAI {% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <section class="col-md-10">
+        <div class="bg-white p-4 rounded-3 shadow-sm">
+            <h3 class="mb-3"><i class="bi bi-patch-check-fill text-success"></i> Documento Tarjado com Sucesso!</h3>
+            <p class="text-muted">Abaixo está a pré-visualização do seu documento com as tarjas aplicadas. Você pode ajustar as tarjas antes de baixar.</p>
+            <hr>
+
+            <div class="border rounded-3 mb-4" style="height: 700px;">
+                <iframe id="pdfIframe" src="data:application/pdf;base64,{{ pdf_data }}" width="100%" height="100%" style="border: none;"></iframe>
+            </div>
+
+            <form method="post" action="{{ url_for('aplicar_tarjas_pdf') }}" id="formTarjas">
+                <input type="hidden" name="tarjas_manualmente_adicionadas" id="manualTarjasHidden">
+
+                <div class="mb-3">
+                    <label for="trechoManual" class="form-label">Inserir trecho manual:</label>
+                    <div class="input-group">
+                        <input type="text" id="trechoManual" class="form-control" placeholder="Cole aqui o trecho que deseja ocultar" autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary" onclick="adicionarTarjaManual()">➕ Adicionar</button>
+                    </div>
+                    <small class="form-text text-muted">Você pode adicionar vários trechos, um de cada vez.</small>
+                </div>
+
+                <ul id="listaTarjas" class="list-group mb-4"></ul>
+
+                <h4 class="mb-3">Dados encontrados:</h4>
+                <div class="mb-4">
+                    <p><strong>{{ ocorrencias|length }}</strong> ocorrência(s) sensível(is) detectada(s).</p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="checkAll" checked>
+                        <label class="form-check-label fw-bold" for="checkAll">Selecionar/Desmarcar todos</label>
+                    </div>
+                    {% for item in ocorrencias %}
+                        <div class="form-check">
+                            <input class="form-check-input item-checkbox" type="checkbox" name="selecionados" value="{{ item.id }}" id="chk{{ loop.index }}" checked>
+                            <label class="form-check-label" for="chk{{ loop.index }}">
+                                {{ item.tipo }}: "{{ item.texto }}" (Página {{ item.pagina + 1 }})
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+                <hr>
+
+                <div class="d-flex justify-content-center align-items-center mt-4 gap-3 flex-wrap">
+                    <button type="button" id="btn-abrir-download-popup" class="btn btn-stgc-action btn-stgc-action-primary">
+                        <i class="bi bi-shield-fill-x"></i> Aplicar Tarjas e Fazer Download
+                    </button>
+                    <a href="{{ url_for('tarjar_pdf') }}" class="btn btn-stgc-action btn-stgc-action-secondary">
+                        <i class="bi bi-x-circle"></i> Cancelar Solicitação
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<div id="popup-download" class="popup-container-overlay">
+  <div class="popup-content">
+    <h5 class="mb-3">Confirmação de Download</h5>
+    <p>Confirme se as tarjas aplicadas no documento estão corretas antes de finalizar. Esta ação é irreversível.</p>
+    <div class="d-flex justify-content-center gap-3 mt-4">
+      <button id="btn-cancelar-download" class="btn btn-secondary">Cancelar</button>
+      <button id="btn-confirmar-download" class="btn btn-stgc-action btn-stgc-action-primary">Confirmar e Baixar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    let tarjasManuais = [];
+
+    function adicionarTarjaManual() {
+        const input = document.getElementById("trechoManual");
+        const valor = input.value.trim();
+        if (valor.length === 0) {
+            alert("Insira um trecho antes de adicionar.");
+            return;
+        }
+        tarjasManuais.push(valor);
+        document.getElementById("manualTarjasHidden").value = tarjasManuais.join("|");
+
+        const li = document.createElement("li");
+        li.className = "list-group-item d-flex justify-content-between align-items-center";
+        li.textContent = valor;
+
+        const btnRemover = document.createElement("button");
+        btnRemover.textContent = "Remover";
+        btnRemover.className = "btn btn-sm btn-outline-danger ms-2";
+        btnRemover.onclick = function () {
+            tarjasManuais = tarjasManuais.filter(t => t !== valor);
+            document.getElementById("manualTarjasHidden").value = tarjasManuais.join("|");
+            li.remove();
+            atualizarPreviewPDF();
+        };
+
+        li.appendChild(btnRemover);
+        document.getElementById("listaTarjas").appendChild(li);
+
+        input.value = "";
+        atualizarPreviewPDF();
+    }
+
+    document.getElementById("checkAll").addEventListener("change", function () {
+        const checkboxes = document.querySelectorAll(".item-checkbox");
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        atualizarPreviewPDF();
+    });
+
+    document.querySelectorAll(".item-checkbox").forEach(cb => {
+        cb.addEventListener("change", atualizarPreviewPDF);
+    });
+
+    async function atualizarPreviewPDF() {
+        const selecionados = Array.from(document.querySelectorAll('input[name="selecionados"]:checked')).map(i => i.value);
+        const manuaisRaw = document.getElementById('manualTarjasHidden').value;
+        const manuais = manuaisRaw.split('|').map(t => t.trim()).filter(t => t.length > 0);
+
+        try {
+            const resp = await fetch('/atualizar_preview_pdf', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({selecionados, manuais})
+            });
+
+            if (!resp.ok) {
+                alert('Erro ao atualizar preview');
+                return;
+            }
+
+            const data = await resp.json();
+
+            if (data.erro) {
+                alert('Erro ao atualizar preview: ' + data.erro);
+                return;
+            }
+
+            document.getElementById('pdfIframe').src = 'data:application/pdf;base64,' + data.pdf_data;
+
+        } catch (e) {
+            alert('Erro inesperado ao atualizar preview');
+            console.error(e);
+        }
+    }
+
+    window.addEventListener('load', atualizarPreviewPDF);
+    
+    // Lógica do Pop-up 
+    const downloadButton = document.getElementById('btn-abrir-download-popup');
+    const popupDownload = document.getElementById('popup-download');
+    const btnCancelarDownload = document.getElementById('btn-cancelar-download');
+    const btnConfirmarDownload = document.getElementById('btn-confirmar-download');
+    const formTarjas = document.getElementById('formTarjas');
+
+    downloadButton.addEventListener('click', function(event) {
+        event.preventDefault(); 
+        popupDownload.classList.add('show-popup');
+    });
+
+    btnCancelarDownload.addEventListener('click', function() {
+        popupDownload.classList.remove('show-popup');
+    });
+
+    btnConfirmarDownload.addEventListener('click', function() {
+        popupDownload.classList.remove('show-popup');
+        formTarjas.submit();
+    });
+</script>
+{% endblock %}

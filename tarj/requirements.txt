@@ -1,0 +1,11 @@
+Flask
+python-docx
+PyMuPDF
+pdf2image
+pytesseract
+Pillow
+fuzzywuzzy
+spacy
+spacy-alignments
+Flask-Session
+pyzbar
